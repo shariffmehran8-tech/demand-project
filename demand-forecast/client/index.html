@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manifest — Demand Forecast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/recharts@2/umd/Recharts.js"></script>
+<style>
+  :root {
+    --ink: #14181C;
+    --ink-2: #1C2229;
+    --paper: #F4F1E8;
+    --amber: #E8A33D;
+    --amber-dim: #6B5330;
+    --ok: #6FA97C;
+    --warn: #E8A33D;
+    --danger: #D3644B;
+    --line: #2C333B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  #root { min-height: 100vh; }
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+  }
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; }
+  }
+  .sidebar {
+    background: var(--ink-2);
+    border-right: 1px solid var(--line);
+    padding: 28px 0;
+  }
+  .brand {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    padding: 0 24px 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .brand span { color: var(--amber); }
+  .brand small {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: #8A93A0;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  .sku-row {
+    padding: 14px 24px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+  }
+  .sku-row:hover { background: #232A32; }
+  .sku-row.active {
+    border-left-color: var(--amber);
+    background: #232A32;
+  }
+  .sku-row .code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #8A93A0;
+    letter-spacing: 0.5px;
+  }
+  .sku-row .name { font-size: 14px; margin-top: 2px; }
+  .status-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .main {
+    padding: 36px 44px;
+    max-width: 980px;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .title { font-family: 'Archivo Black', sans-serif; font-size: 26px; }
+  .subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #8A93A0;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+  .service-select {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+  }
+  .runway {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .runway-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8A93A0;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .runway-track {
+    position: relative;
+    height: 10px;
+    background: #2C333B;
+    border-radius: 5px;
+    overflow: visible;
+  }
+  .runway-fill {
+    position: absolute;
+    height: 100%;
+    border-radius: 5px;
+    background: var(--ok);
+    transition: width 0.3s;
+  }
+  .runway-marker {
+    position: absolute;
+    top: -6px;
+    width: 2px;
+    height: 22px;
+    background: var(--amber);
+  }
+  .runway-marker .mk-label {
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--amber);
+    white-space: nowrap;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 700px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8A93A0;
+  }
+  .stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 24px;
+    margin-top: 6px;
+    color: var(--amber);
+  }
+  .chart-card {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px 20px 8px;
+  }
+  .chart-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8A93A0;
+    margin-bottom: 12px;
+  }
+  .legend-row {
+    display: flex;
+    gap: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #8A93A0;
+    margin-top: 8px;
+    padding-bottom: 4px;
+  }
+  .legend-swatch {
+    display: inline-block;
+    width: 12px; height: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .footnote {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #5C6570;
+    margin-top: 28px;
+    line-height: 1.6;
+  }
+  .loading {
+    padding: 60px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: #8A93A0;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const {
+  ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
+} = Recharts;
+
+const API_BASE = "http://localhost:4010";
+
+const STATUS_META = {
+  reorder_now: { color: "#D3644B", label: "Reorder now" },
+  watch: { color: "#E8A33D", label: "Watch" },
+  healthy: { color: "#6FA97C", label: "Healthy" }
+};
+
+function App() {
+  const [skus, setSkus] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [forecast, setForecast] = useState(null);
+  const [serviceLevel, setServiceLevel] = useState(95);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/skus`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSkus(data);
+        if (data.length) setSelected(data[0].sku);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    setLoading(true);
+    fetch(`${API_BASE}/api/forecast/${selected}?serviceLevel=${serviceLevel}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setForecast(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [selected, serviceLevel]);
+
+  const chartData = React.useMemo(() => {
+    if (!forecast) return [];
+    const hist = forecast.history.slice(-16).map((h) => ({
+      week: h.week.slice(5),
+      actual: h.units,
+      forecastLine: null
+    }));
+    const lastActual = hist[hist.length - 1];
+    const fc = forecast.forecast.map((f, i) => ({
+      week: f.week.slice(5),
+      actual: null,
+      forecastLine: f.units
+    }));
+    // bridge the two lines visually
+    if (fc.length) fc[0].bridgeActual = lastActual ? lastActual.actual : null;
+    return [...hist, ...fc];
+  }, [forecast]);
+
+  const status = forecast ? STATUS_META[forecast.stockStatus] : null;
+  const runwayMax = forecast ? Math.max(forecast.currentStock, forecast.stats.reorderPoint * 1.4) : 1;
+  const stockPct = forecast ? Math.min(100, (forecast.currentStock / runwayMax) * 100) : 0;
+  const reorderPct = forecast ? Math.min(100, (forecast.stats.reorderPoint / runwayMax) * 100) : 0;
+  const safetyPct = forecast ? Math.min(100, (forecast.stats.safetyStock / runwayMax) * 100) : 0;
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="brand">
+          MANIFEST<span>·</span>FORECAST
+          <small>Inventory demand engine</small>
+        </div>
+        {skus.map((s) => (
+          <div
+            key={s.sku}
+            className={`sku-row ${s.sku === selected ? "active" : ""}`}
+            onClick={() => setSelected(s.sku)}
+          >
+            <div className="code mono">{s.sku}</div>
+            <div className="name">{s.name}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="main">
+        {loading || !forecast ? (
+          <div className="loading">loading forecast…</div>
+        ) : (
+          <React.Fragment>
+            <div className="header-row">
+              <div>
+                <div className="title">{forecast.name}</div>
+                <div className="subtitle">{forecast.sku} · LEAD TIME {forecast.leadTimeWeeks}W</div>
+              </div>
+              <select
+                className="service-select"
+                value={serviceLevel}
+                onChange={(e) => setServiceLevel(Number(e.target.value))}
+              >
+                <option value={90}>90% service level</option>
+                <option value={95}>95% service level</option>
+                <option value={98}>98% service level</option>
+                <option value={99}>99% service level</option>
+              </select>
+            </div>
+
+            <div className="runway">
+              <div className="runway-label">
+                <span>
+                  <span className="status-dot" style={{ background: status.color }}></span>
+                  {status.label.toUpperCase()} — {forecast.currentStock} units on hand
+                </span>
+                <span>REORDER RUNWAY</span>
+              </div>
+              <div className="runway-track">
+                <div
+                  className="runway-fill"
+                  style={{ width: `${stockPct}%`, background: status.color }}
+                ></div>
+                <div className="runway-marker" style={{ left: `${reorderPct}%` }}>
+                  <div className="mk-label">reorder pt: {forecast.stats.reorderPoint}</div>
+                </div>
+                <div
+                  className="runway-marker"
+                  style={{ left: `${safetyPct}%`, background: "#5C6570" }}
+                >
+                  <div className="mk-label" style={{ color: "#8A93A0" }}>safety: {forecast.stats.safetyStock}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-label">Avg weekly (3wk)</div>
+                <div className="stat-value">{forecast.stats.movingAverage}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Trend / week</div>
+                <div className="stat-value">
+                  {forecast.stats.trendPerWeek > 0 ? "+" : ""}{forecast.stats.trendPerWeek}
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Std deviation</div>
+                <div className="stat-value">{forecast.stats.stdDev}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Reorder point</div>
+                <div className="stat-value">{forecast.stats.reorderPoint}</div>
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <div className="chart-title">Actual vs. 8-week forecast</div>
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2C333B" />
+                  <XAxis dataKey="week" tick={{ fill: "#8A93A0", fontSize: 10 }} axisLine={{ stroke: "#2C333B" }} />
+                  <YAxis tick={{ fill: "#8A93A0", fontSize: 10 }} axisLine={{ stroke: "#2C333B" }} />
+                  <Tooltip
+                    contentStyle={{ background: "#1C2229", border: "1px solid #2C333B", fontSize: 12 }}
+                    labelStyle={{ color: "#F4F1E8" }}
+                  />
+                  <ReferenceLine y={forecast.stats.reorderPoint} stroke="#5C6570" strokeDasharray="4 4" />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#F4F1E8"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="forecastLine"
+                    stroke="#E8A33D"
+                    strokeWidth={2}
+                    strokeDasharray="5 4"
+                    dot={false}
+                    connectNulls
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div className="legend-row">
+                <span><span className="legend-swatch" style={{ background: "#F4F1E8" }}></span>actual sales</span>
+                <span><span className="legend-swatch" style={{ background: "#E8A33D" }}></span>forecast</span>
+              </div>
+            </div>
+
+            <div className="footnote">
+              Forecast: Holt's double exponential smoothing (α=0.3, β=0.15). Safety stock = Z({serviceLevel}%) × σ × √(lead time).
+              Reorder when on-hand stock crosses the reorder point line.
+            </div>
+          </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
